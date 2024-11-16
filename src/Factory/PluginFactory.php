@@ -1,7 +1,7 @@
 <?php
-namespace CMS\PluginSystem\Factory;
+namespace Cedpaq\PluginManager\Factory;
 
-use CMS\PluginSystem\Plugins\PluginInterface;
+use Cedpaq\PluginManager\Plugins\PluginInterface;
 
 class PluginFactory {
     public static function create($type, $config): PluginInterface {

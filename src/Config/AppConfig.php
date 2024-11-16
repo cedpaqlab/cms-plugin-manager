@@ -1,7 +1,7 @@
 <?php
-namespace CMS\PluginSystem\Config;
+namespace Cedpaq\PluginManager\Config;
 
-use CMS\PluginSystem\Singleton\SingletonTrait;
+use Cedpaq\PluginManager\Singleton\SingletonTrait;
 
 class AppConfig {
     use SingletonTrait;

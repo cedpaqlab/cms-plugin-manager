@@ -1,5 +1,5 @@
 <?php
-namespace CMS\PluginSystem\Plugins;
+namespace Cedpaq\PluginManager\Plugins;
 
 interface PluginInterface {
     public function activate();

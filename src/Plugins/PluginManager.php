@@ -1,7 +1,7 @@
 <?php
-namespace CMS\PluginSystem\Plugins;
+namespace Cedpaq\PluginManager\Plugins;
 
-use CMS\PluginSystem\Factory\PluginFactory;
+use Cedpaq\PluginManager\Factory\PluginFactory;
 
 class PluginManager {
     private $plugins = [];

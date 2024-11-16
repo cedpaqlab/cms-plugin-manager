@@ -1,8 +1,8 @@
 <?php
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use CMS\PluginSystem\Config\AppConfig;
-use CMS\PluginSystem\Plugins\PluginManager;
+use Cedpaq\PluginManager\Config\AppConfig;
+use Cedpaq\PluginManager\Plugins\PluginManager;
 
 $config = AppConfig::getInstance();
 $config->set('SEO', ['enabled' => true]);

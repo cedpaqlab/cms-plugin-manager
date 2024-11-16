@@ -1,7 +1,7 @@
 <?php
-namespace CMS\PluginSystem\Plugins\Plugins;
+namespace Cedpaq\PluginManager\Plugins\Plugins;
 
-use CMS\PluginSystem\Plugins\AbstractPlugin;
+use Cedpaq\PluginManager\Plugins\AbstractPlugin;
 
 class SEOPlugin extends AbstractPlugin {
     public function activate() {

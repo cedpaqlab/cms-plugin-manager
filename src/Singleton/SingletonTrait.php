@@ -1,5 +1,5 @@
 <?php
-namespace CMS\PluginSystem\Singleton;
+namespace Cedpaq\PluginManager\Singleton;
 
 trait SingletonTrait {
     private static $instance;
