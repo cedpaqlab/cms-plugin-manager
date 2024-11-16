@@ -13,6 +13,6 @@ class AppConfig {
     }
 
     public function set($key, $value) {
-        this->config[$key] = $value;
+        $this->config[$key] = $value;
     }
 }
