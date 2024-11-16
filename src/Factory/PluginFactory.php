@@ -5,7 +5,7 @@ use Cedpaq\PluginManager\Plugins\PluginInterface;
 
 class PluginFactory {
     public static function create($type, $config): PluginInterface {
-        $class = "CMS\\PluginSystem\\Plugins\\Plugins\\{$type}Plugin";
+        $class = "Cedpaq\\PluginManager\\Plugins\\Plugins\\{$type}Plugin";
         if (class_exists($class)) {
             return new $class($config);
         }
