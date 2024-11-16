@@ -1,0 +1,21 @@
+# Exclude Composer dependencies directory
+/vendor/
+
+# Exclude PHPStorm-specific metadata and configuration
+.idea/
+
+# Exclude temporary or system-specific files
+*.log
+*.tmp
+*.cache
+*.bak
+*.swp
+*.DS_Store
+Thumbs.db
+
+# Exclude PHPUnit result cache
+.phpunit.result.cache
+
+# Exclude environment configuration files
+.env
+.env.*
