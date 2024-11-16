@@ -1,5 +1,6 @@
 # Exclude Composer dependencies directory
 /vendor/
+/logs/
 
 # Exclude PHPStorm-specific metadata and configuration
 .idea/
