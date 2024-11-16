@@ -70,11 +70,24 @@ class PluginManager {
 
     public function deactivatePlugin($type) {
         if (isset($this->plugins[$type])) {
-            $this->plugins[$type]->deactivate();
-            $this->log("Plugin '$type' has been deactivated.");
+            // Check if the plugin is currently active before attempting to deactivate it
+            if ($this->isActive($type)) {
+                $this->plugins[$type]->deactivate();
+                $this->log("Plugin '$type' has been deactivated.");
+            } else {
+                $this->log("Attempted to deactivate an inactive plugin: '$type'.", 'warning');
+            }
         } else {
             $this->log("Attempted to deactivate a non-existent plugin: '$type'.", 'warning');
         }
+    }
+
+    /**
+     * Check if a plugin is active.
+     * This method needs to accurately reflect how you track the active state of plugins.
+     */
+    private function isActive($type) {
+        return in_array($type, $this->activePlugins);
     }
 
     // Log the activation of a plugin
@@ -101,7 +114,7 @@ class PluginManager {
     private function log($message, $level = 'info') {
         $logger = $this->getPlugin('Logger');
         if ($logger) {
-            $logger->log($message);
+            $logger->log($message, $level);
         } else {
             error_log("Logger not available: $message");
         }

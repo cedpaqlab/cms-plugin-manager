@@ -8,6 +8,7 @@ use Cedpaq\PluginManager\Exceptions\PluginNotFoundException;
 try {
     $config = AppConfig::getInstance();
     $config->set('log_path', __DIR__ . '/../logs/');
+    ini_set('error_log', $config->get('log_path').'errors.log');
 
     // Plugins config
     $config->set('Logger', ['enabled' => true]);
@@ -16,7 +17,7 @@ try {
 
     $pluginManager = new PluginManager();
 
-    #$pluginManager->loadPlugin('Logger', $config->get('Logger'));
+    $pluginManager->loadPlugin('Logger', $config->get('Logger'));
     #$pluginManager->activatePlugin('Logger');
     $pluginManager->deactivatePlugin('Logger');
 

@@ -2,6 +2,8 @@
 namespace Cedpaq\PluginManager\Plugins\Plugins;
 
 use Cedpaq\PluginManager\Plugins\AbstractPlugin;
+use DateTime;
+use DateTimeZone;
 
 class LoggerPlugin extends AbstractPlugin {
     public function activate() {
@@ -16,17 +18,22 @@ class LoggerPlugin extends AbstractPlugin {
         return [];
     }
 
-    public function log($message) {
+    public function log($message, $level = 'info') {
+        $level = strtoupper(substr($level, 0, 4));
         if (!$this->manager) {
             throw new \Exception("Plugin manager not set for LoggerPlugin.");
         }
         $logPath = $this->manager->getLogPath();
         $logFile = $logPath . 'logger.log';
 
-        $timestamp = date('Y-m-d H:i:s');
+        // Format the timestamp in UTC
+        $timestamp = new DateTime('now', new DateTimeZone('UTC'));
+        $formattedTimestamp = $timestamp->format('d-M-Y H:i:s') . ' UTC'; // Adjusted format to match your example
+
         $callerClass = $this->getCallerClassName();
 
-        $logMessage = "$timestamp: ".(!empty($callerClass) ? '['.$callerClass.'] ' : '')."$message" . PHP_EOL;
+        // Build the log message with the desired format
+        $logMessage = "[$level][$formattedTimestamp]".(!empty($callerClass) ? "[$callerClass] " : ' ')."$message" . PHP_EOL;
 
         if (!file_exists($logFile)) {
             file_put_contents($logFile, "", FILE_APPEND);

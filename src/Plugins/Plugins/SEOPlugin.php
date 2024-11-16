@@ -37,8 +37,6 @@ class SEOPlugin extends AbstractPlugin {
         $logger = $this->manager->getPlugin('Logger');
         if ($logger) {
             $logger->log("Action performed in SEOPlugin.");
-        } else {
-            echo "Logger not available.";
         }
     }
 }
