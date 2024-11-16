@@ -12,5 +12,9 @@ trait SingletonTrait {
     }
 
     private function __clone() {}
-    private function __wakeup() {}
+
+    // Prevent unserializing
+    public function __wakeup() {
+        throw new \Exception("Cannot unserialize a singleton.");
+    }
 }
