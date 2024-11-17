@@ -14,7 +14,7 @@ try
 
     // Setup logging path
     $config->set('log_path', __DIR__ . '/../logs/');
-    ini_set('error_log', $config->get('log_path') . 'errors.log');
+//    ini_set('error_log', $config->get('log_path') . 'errors.log');
 
     // Initialize plugin manager
     $pluginManager = new PluginManager($configRepository);

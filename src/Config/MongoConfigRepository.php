@@ -2,18 +2,32 @@
 namespace Cedpaq\PluginManager\Config;
 
 use MongoDB\Client;
+use MongoDB\Collection;
+use MongoDB\Database;
 
 class MongoConfigRepository implements ConfigRepositoryInterface {
     private $db;
     private $configCollection;
     private $pluginCollection;
 
-    public function __construct() {
-        $client = new Client("mongodb://localhost:27017");
+    // Inject MongoDB Client
+    public function __construct(Client $client = null) {
+        $client = $client ?? new Client("mongodb://localhost:27017");
         $this->db = $client->selectDatabase('pluginManager');
-        $this->configCollection = $this->db->config;
-        $this->pluginCollection = $this->db->plugins;
+
+        // Try to explicitly fetch collections
+        try {
+            $this->configCollection = $this->db->selectCollection('config');
+            $this->pluginCollection = $this->db->selectCollection('plugins');
+        } catch (\Exception $e) {
+            throw new \Exception("Error initializing collections: " . $e->getMessage());
+        }
+
+        if (!$this->configCollection || !$this->pluginCollection) {
+            throw new \Exception("Required collections are not initialized properly.");
+        }
     }
+
 
     public function get($key) {
         $document = $this->configCollection->findOne(['key' => $key]);
@@ -29,16 +43,28 @@ class MongoConfigRepository implements ConfigRepositoryInterface {
         );
     }
 
-    public function addPlugin($pluginName, $config) {
-        $this->pluginCollection->updateOne(
-            ['name' => $pluginName, 'type' => 'plugin'],
-            ['$set' => $config],
+    public function addPlugin($name, $data)
+    {
+        if (empty($name) || !is_array($data)) {
+            throw new \InvalidArgumentException("Invalid plugin data provided.");
+        }
+
+        $updateResult = $this->pluginCollection->updateOne(
+            ['name' => $name],
+            ['$set' => $data],
             ['upsert' => true]
         );
+
+        if ($updateResult->getModifiedCount() > 0 || $updateResult->getUpsertedCount() > 0) {
+            return true; // Plugin successfully added or updated
+        }
+
+        return false; // No change made
     }
 
     public function getAllActivePlugins() {
-        return $this->pluginCollection->find(['type' => 'plugin', 'enabled' => true]);
+        $cursor = $this->pluginCollection->find(['type' => 'plugin', 'enabled' => true]);
+        return iterator_to_array($cursor, false); // Safely convert the cursor to an array
     }
 
     public function isPluginActive($pluginName) {
@@ -47,12 +73,18 @@ class MongoConfigRepository implements ConfigRepositoryInterface {
     }
 
     public function activatePlugin($pluginName) {
-        $this->pluginCollection->updateOne(
+        $updateResult = $this->pluginCollection->updateOne(
             ['name' => $pluginName, 'type' => 'plugin'],
             ['$set' => ['enabled' => true]],
             ['upsert' => true]
         );
+
+        if ($updateResult->getModifiedCount() == 0 && $updateResult->getUpsertedCount() == 0) {
+            error_log("No records updated or upserted for plugin activation: $pluginName");
+            throw new \Exception("Failed to activate plugin '$pluginName'.");
+        }
     }
+
 
     public function deactivatePlugin($pluginName) {
         $this->pluginCollection->updateOne(

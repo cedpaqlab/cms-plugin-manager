@@ -21,7 +21,7 @@ class PluginManager {
 
     public function initializePlugins(array $pluginConfigs): void
     {
-        // First, add or update plugins in the database if necessary
+        // Add or update plugins in the database
         foreach ($pluginConfigs as $name => $config) {
             $this->configRepository->addPlugin($name, [
                 'name' => $name,
@@ -31,10 +31,9 @@ class PluginManager {
             ]);
         }
 
-        // Then, load and activate plugins based on database state
+        // Load and activate plugins from the database
         $activePlugins = $this->configRepository->getAllActivePlugins();
         foreach ($activePlugins as $plugin) {
-            // Check dependencies before loading and activating
             if ($this->allDependenciesActive($plugin['name'], $pluginConfigs)) {
                 $this->loadAndActivate($plugin['name'], $plugin);
             }
@@ -100,16 +99,25 @@ class PluginManager {
     }
 
     // Deactivate a plugin
-    public function deactivatePlugin($type): void {
-        if (isset($this->plugins[$type]) && $this->configRepository->isPluginActive($type)) {
-            if ($this->plugins[$type]->deactivate()) {
-                $this->configRepository->deactivatePlugin($type);
-                $this->log("Plugin '$type' has been deactivated.");
-            }
-        } else {
-            throw new \Exception("Attempted to deactivate an inactive or non-existent plugin: '$type'.");
+    public function deactivatePlugin($type): void
+    {
+        if (!isset($this->plugins[$type])) {
+            error_log("Plugin not loaded: $type");
+            throw new \Exception("Plugin '$type' not found.");
+        }
+
+        if (!$this->configRepository->isPluginActive($type)) {
+            error_log("Plugin not active when trying to deactivate: $type");
+            throw new \Exception("Plugin '$type' not active.");
+        }
+
+        if ($this->plugins[$type]->deactivate()) {
+            $this->configRepository->deactivatePlugin($type);
+            unset($this->activePlugins[$type]);
+            $this->log("Plugin '$type' has been deactivated.");
         }
     }
+
 
     // Method to resolve and activate all dependencies for a given plugin recursively
     private function resolveDependencies($type): void {
