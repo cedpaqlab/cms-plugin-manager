@@ -2,8 +2,6 @@
     "name": "cedpaq/cms-plugin-manager",
     "description": "CMS Plugin Manager is an advanced PHP library for managing plugins in a CMS. It leverages advanced PHP concepts and design patterns to provide a flexible, extensible, and efficient solution.",
     "type": "library",
-    "require-dev": {
-    },
     "license": "MIT",
     "autoload": {
         "psr-4": {
@@ -12,12 +10,16 @@
     },
     "minimum-stability": "stable",
     "require": {
-        "php": "^8.2"
+        "php": "^8.2",
+        "mongodb/mongodb": "^1.16"
     },
     "repositories": [
         {
             "type": "vcs",
             "url": "https://github.com/cedpaqlab/cms-plugin-manager"
         }
-    ]
+    ],
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    }
 }
