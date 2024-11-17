@@ -12,25 +12,21 @@ class SEOPlugin extends AbstractPlugin {
     public function activate() {
         try {
             echo "SEO Plugin activated" . PHP_EOL;
-            // Simuler une erreur pour démonstration
-            if (false) {
-                throw new \Exception("Failed to activate SEO Plugin.");
-            }
+            return true;
         } catch (\Exception $e) {
-            echo "Error during activation: " . $e->getMessage() . PHP_EOL;
+            echo "Error during SEO activation: " . $e->getMessage() . PHP_EOL;
+            return false;
         }
     }
 
     public function deactivate() {
         try {
             echo "SEO Plugin deactivated" . PHP_EOL;
+            return true;
         } catch (\Exception $e) {
-            echo "Error during deactivation: " . $e->getMessage() . PHP_EOL;
+            echo "Error during SEO deactivation: " . $e->getMessage() . PHP_EOL;
+            return false;
         }
-    }
-
-    public function getDependencies() {
-        return $this->config['dependencies'] ?? [];
     }
 
     public function doSomething() {

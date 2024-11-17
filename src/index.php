@@ -13,36 +13,38 @@ try {
     // Plugins config
     $config->set('Logger', ['enabled' => true]);
     $config->set('SEO', ['enabled' => true, 'dependencies' => ['Logger']]);
-    $config->set('Cache', ['enabled' => false]);
+    $config->set('Cache', ['enabled' => true]);
 
     $pluginManager = new PluginManager();
-
     $pluginManager->loadPlugin('Logger', $config->get('Logger'));
-    #$pluginManager->activatePlugin('Logger');
-    $pluginManager->deactivatePlugin('Logger');
+    $pluginManager->activatePlugin('Logger');
+    #$pluginManager->deactivatePlugin('Logger');
 
     $pluginManager->loadPlugin('SEO', $config->get('SEO'));
     $pluginManager->activatePlugin('SEO');
     #$pluginManager->deactivatePlugin('SEO');
 
-    #$pluginManager->loadPlugin('Cache1', $config->get('Cache'));
-    #$pluginManager->activatePlugin('Cache');
+    $pluginManager->loadPlugin('Cache', $config->get('Cache'));
+    $pluginManager->activatePlugin('Cache');
     #$pluginManager->deactivatePlugin('Cache');
 
-    $seoPlugin = $pluginManager->getPlugin('SEO');
-    $seoPlugin->doSomething();
+    // Usages
+    #$seoPlugin = $pluginManager->getPlugin('SEO');
+    #$seoPlugin->doSomething();
 
-    $logger = $pluginManager->getPlugin('Logger');
-    if ($logger) {
-        $logger->log("Application loaded!");
-    }
+//    $logger = $pluginManager->getPlugin('Logger');
+//    if ($logger) {
+//        $logger->log("Application loaded!");
+//    }
 
 }
 catch (PluginNotFoundException $e)
 {
     echo "Plugin error: " . $e->getMessage() . PHP_EOL;
+    error_log("Plugin error: " . $e->getMessage());
 }
 catch (\Exception $e)
 {
     echo "An unexpected error occurred: " . $e->getMessage() . PHP_EOL;
+    error_log("An unexpected error occurred: " . $e->getMessage());
 }

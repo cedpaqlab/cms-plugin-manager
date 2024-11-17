@@ -3,18 +3,15 @@ namespace Cedpaq\PluginManager\Plugins;
 
 abstract class AbstractPlugin implements PluginInterface {
     protected $config;
+    protected $manager;
 
     public function __construct($config, $manager) {
         $this->config = $config;
         $this->manager = $manager;
     }
 
-    public function getConfig() {
-        return $this->config;
-    }
-
-    public function __toString() {
-        return static::class;
+    public function getDependencies() {
+        return $this->config['dependencies'] ?? [];
     }
 
     abstract public function activate();

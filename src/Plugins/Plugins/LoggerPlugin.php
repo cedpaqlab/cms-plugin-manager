@@ -7,15 +7,23 @@ use DateTimeZone;
 
 class LoggerPlugin extends AbstractPlugin {
     public function activate() {
-        echo "Logger Plugin activated" . PHP_EOL;
+        try {
+            echo "Logger Plugin activated" . PHP_EOL;
+            return true;
+        } catch (\Exception $e) {
+            echo "Error during Logger activation: " . $e->getMessage() . PHP_EOL;
+            return false;
+        }
     }
 
     public function deactivate() {
-        echo "Logger Plugin deactivated" . PHP_EOL;
-    }
-
-    public function getDependencies() {
-        return [];
+        try {
+            echo "Logger Plugin deactivated" . PHP_EOL;
+            return true;
+        } catch (\Exception $e) {
+            echo "Error during Logger deactivation: " . $e->getMessage() . PHP_EOL;
+            return false;
+        }
     }
 
     public function log($message, $level = 'info') {

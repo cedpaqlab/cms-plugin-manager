@@ -5,10 +5,22 @@ use Cedpaq\PluginManager\Plugins\AbstractPlugin;
 
 class CachePlugin extends AbstractPlugin {
     public function activate() {
-        echo "Cache Plugin activated" . PHP_EOL;
+        try {
+            echo "Cache Plugin activated" . PHP_EOL;
+            return true;
+        } catch (\Exception $e) {
+            echo "Error during Cache activation: " . $e->getMessage() . PHP_EOL;
+            return false;
+        }
     }
 
     public function deactivate() {
-        echo "Cache Plugin deactivated" . PHP_EOL;
+        try {
+            echo "Cache Plugin deactivated" . PHP_EOL;
+            return true;
+        } catch (\Exception $e) {
+            echo "Error during Cache deactivation: " . $e->getMessage() . PHP_EOL;
+            return false;
+        }
     }
 }

@@ -19,8 +19,10 @@ class PluginManager {
     // Get a plugin
     public function getPlugin($type) {
         if (!isset($this->plugins[$type])) {
-            #throw new \Exception("Plugin $type not found.");
-            return null; // Return null if plugin not found
+            throw new \Exception("Plugin '$type' not found.");
+        }
+        if (!$this->isActive($type)){
+            throw new \Exception("Plugin '$type' not active.");
         }
         return $this->plugins[$type];
     }
@@ -35,7 +37,7 @@ class PluginManager {
         if (!isset($this->plugins[$type])) {
             $this->plugins[$type] = PluginFactory::create($type, $config, $this);
         } else {
-            //TODO: Log the case we try to reload an existing plugin
+            $this->log("Plugin already loaded", "warning");
         }
     }
 
@@ -53,32 +55,40 @@ class PluginManager {
     }
 
     // Resolve and activate all dependencies for a given plugin recursively
-    private function resolveDependencies($type) {
+    private function resolveDependencies($type): void
+    {
         $dependencies = $this->plugins[$type]->getDependencies();
         foreach ($dependencies as $dependency) {
             if (!isset($this->plugins[$dependency])) {
                 $depConfig = AppConfig::getInstance()->get($dependency);
                 if ($depConfig && $depConfig['enabled']) {
                     $this->loadPlugin($dependency, $depConfig);
+                    $this->activatePlugin($dependency);
                 } else {
                     throw new \Exception("Dependency plugin $dependency required by $type is not enabled or not properly configured.");
+                    continue;
                 }
+            } else if (!$this->isActive($dependency)) {
+                // Already loaded but not activated
+                $this->activatePlugin($dependency);
             }
-            $this->activatePlugin($dependency);
         }
     }
 
-    public function deactivatePlugin($type) {
+    public function deactivatePlugin($type): void
+    {
         if (isset($this->plugins[$type])) {
             // Check if the plugin is currently active before attempting to deactivate it
             if ($this->isActive($type)) {
-                $this->plugins[$type]->deactivate();
-                $this->log("Plugin '$type' has been deactivated.");
+                if ($this->plugins[$type]->deactivate()) {
+                    $this->activePlugins = array_diff($this->activePlugins, [$type]);
+                    $this->log("Plugin '$type' has been deactivated.");
+                }
             } else {
-                $this->log("Attempted to deactivate an inactive plugin: '$type'.", 'warning');
+                throw new \Exception("Attempted to deactivate an inactive plugin: '$type'.");
             }
         } else {
-            $this->log("Attempted to deactivate a non-existent plugin: '$type'.", 'warning');
+            throw new \Exception("Attempted to deactivate a non-existent plugin: '$type'.");
         }
     }
 
@@ -86,12 +96,14 @@ class PluginManager {
      * Check if a plugin is active.
      * This method needs to accurately reflect how you track the active state of plugins.
      */
-    private function isActive($type) {
+    private function isActive($type): bool
+    {
         return in_array($type, $this->activePlugins);
     }
 
     // Log the activation of a plugin
-    private function logActivation($type) {
+    private function logActivation($type): void
+    {
         $logPath = AppConfig::getInstance()->get('log_path');
         if (!$logPath) {
             throw new \Exception("Log path is not configured.");
@@ -102,16 +114,19 @@ class PluginManager {
     }
 
     // Ensure the log directory exists before logging
-    private function ensureLogDirectoryExists() {
+    private function ensureLogDirectoryExists(): void
+    {
         $logDir = $this->logPath;
         if (!is_dir($logDir)) {
             if (!mkdir($logDir, 0755, true) && !is_dir($logDir)) {
                 throw new \Exception("Failed to create log directory: $logDir");
+
             }
         }
     }
 
-    private function log($message, $level = 'info') {
+    private function log($message, $level = 'info'): void
+    {
         $logger = $this->getPlugin('Logger');
         if ($logger) {
             $logger->log($message, $level);
