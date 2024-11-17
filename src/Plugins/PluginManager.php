@@ -1,19 +1,91 @@
 <?php
 namespace Cedpaq\PluginManager\Plugins;
 
-use Cedpaq\PluginManager\Config\AppConfig;
+use Cedpaq\PluginManager\Config\ConfigRepositoryInterface;
 use Cedpaq\PluginManager\Factory\PluginFactory;
 
 class PluginManager {
     private $plugins = [];
     private $activePlugins = [];
-    private $logPath; // Global logs path
+    private $configRepository;
+    private $logPath;
 
-    public function __construct() {
-        $this->logPath = AppConfig::getInstance()->get('log_path');
+    public function __construct(ConfigRepositoryInterface $configRepository) {
+        $this->configRepository = $configRepository;
+        $this->logPath = $this->configRepository->get('log_path');
     }
+
     public function getLogPath() {
-        return $this->logPath; // Getter
+        return $this->logPath;
+    }
+
+    public function initializePlugins(array $pluginConfigs): void
+    {
+        // First, add or update plugins in the database if necessary
+        foreach ($pluginConfigs as $name => $config) {
+            $this->configRepository->addPlugin($name, [
+                'name' => $name,
+                'type' => 'plugin',
+                'enabled' => $config['enabled'],
+                'dependencies' => $config['dependencies'] ?? []
+            ]);
+        }
+
+        // Then, load and activate plugins based on database state
+        $activePlugins = $this->configRepository->getAllActivePlugins();
+        foreach ($activePlugins as $plugin) {
+            // Check dependencies before loading and activating
+            if ($this->allDependenciesActive($plugin['name'], $pluginConfigs)) {
+                $this->loadAndActivate($plugin['name'], $plugin);
+            }
+        }
+    }
+
+    private function allDependenciesActive($pluginName, $pluginConfigs): bool {
+        if (!empty($pluginConfigs[$pluginName]['dependencies'])) {
+            foreach ($pluginConfigs[$pluginName]['dependencies'] as $dependency) {
+                if (!$this->configRepository->isPluginActive($dependency)) {
+                    error_log("Failed to load $pluginName plugin as $dependency plugin dependency is not active.");
+                    return false; // Return false if any dependency is not active
+                }
+            }
+        }
+        return true;
+    }
+
+    private function loadAndActivate($name, $config): void {
+        // Load the plugin if it is not already loaded
+        if (!isset($this->plugins[$name])) {
+            $this->plugins[$name] = PluginFactory::create($name, $config, $this);
+        }
+
+        // Check if the plugin is already activated to avoid repeated activations
+        if (!$this->configRepository->isPluginActive($name)) {
+            // Resolve dependencies before activating the plugin
+            $this->resolveDependencies($name);
+
+            // Activate the plugin after all dependencies are resolved and loaded
+            $this->plugins[$name]->activate();
+            $this->configRepository->activatePlugin($name);
+            $this->logActivation($name);
+        }
+    }
+
+    // List all loaded plugins
+    public function listLoadedPlugins(): string
+    {
+        if (empty($this->plugins)) {
+            return "No plugins are currently loaded.";
+        }
+
+        $pluginList = [];
+        foreach ($this->plugins as $name => $plugin) {
+            // We can add more details here if needed
+            $pluginList[] = $name;
+        }
+
+        // Return a string with all plugin names, separated by commas
+        return implode(", ", $pluginList);
     }
 
     // Get a plugin
@@ -21,112 +93,68 @@ class PluginManager {
         if (!isset($this->plugins[$type])) {
             throw new \Exception("Plugin '$type' not found.");
         }
-        if (!$this->isActive($type)){
+        if (!$this->configRepository->isPluginActive($type)) {
             throw new \Exception("Plugin '$type' not active.");
         }
         return $this->plugins[$type];
     }
 
-    // Load a plugin if it is enabled, without activating it
-    public function loadPlugin($type, $config) {
-        // Is plugin enabled
-        if (!isset($config['enabled']) || !$config['enabled']) {
-            throw new \Exception("Plugin $type is not enabled and cannot be loaded.");
-        }
-        // Load only if not already loaded
-        if (!isset($this->plugins[$type])) {
-            $this->plugins[$type] = PluginFactory::create($type, $config, $this);
+    // Deactivate a plugin
+    public function deactivatePlugin($type): void {
+        if (isset($this->plugins[$type]) && $this->configRepository->isPluginActive($type)) {
+            if ($this->plugins[$type]->deactivate()) {
+                $this->configRepository->deactivatePlugin($type);
+                $this->log("Plugin '$type' has been deactivated.");
+            }
         } else {
-            $this->log("Plugin already loaded", "warning");
+            throw new \Exception("Attempted to deactivate an inactive or non-existent plugin: '$type'.");
         }
     }
 
-    // Activate a plugin, ensuring all its dependencies are loaded and activated first
-    public function activatePlugin($type) {
-        if (!isset($this->plugins[$type])) {
-            throw new \Exception("Plugin $type not loaded.");
-        }
-        if (!in_array($type, $this->activePlugins)) {
-            $this->resolveDependencies($type);
-            $this->plugins[$type]->activate();
-            $this->activePlugins[] = $type;
-            $this->logActivation($type);
-        }
-    }
-
-    // Resolve and activate all dependencies for a given plugin recursively
-    private function resolveDependencies($type): void
-    {
+    // Method to resolve and activate all dependencies for a given plugin recursively
+    private function resolveDependencies($type): void {
+        // Retrieve dependencies of the plugin
         $dependencies = $this->plugins[$type]->getDependencies();
+
+        // Ensure that each dependency is loaded and activated
         foreach ($dependencies as $dependency) {
+            // Load the dependency if it is not already loaded
             if (!isset($this->plugins[$dependency])) {
-                $depConfig = AppConfig::getInstance()->get($dependency);
+                $depConfig = $this->configRepository->get($dependency);
                 if ($depConfig && $depConfig['enabled']) {
-                    $this->loadPlugin($dependency, $depConfig);
-                    $this->activatePlugin($dependency);
+                    $this->loadAndActivate($dependency, $depConfig);  // Use loadAndActivate to load and activate
                 } else {
                     throw new \Exception("Dependency plugin $dependency required by $type is not enabled or not properly configured.");
-                    continue;
                 }
-            } else if (!$this->isActive($dependency)) {
-                // Already loaded but not activated
-                $this->activatePlugin($dependency);
+            } else if (!$this->configRepository->isPluginActive($dependency)) {
+                // The dependency is loaded but not activated, so activate it
+                $this->plugins[$dependency]->activate();
+                $this->configRepository->activatePlugin($dependency);
+                $this->logActivation($dependency);
             }
         }
-    }
-
-    public function deactivatePlugin($type): void
-    {
-        if (isset($this->plugins[$type])) {
-            // Check if the plugin is currently active before attempting to deactivate it
-            if ($this->isActive($type)) {
-                if ($this->plugins[$type]->deactivate()) {
-                    $this->activePlugins = array_diff($this->activePlugins, [$type]);
-                    $this->log("Plugin '$type' has been deactivated.");
-                }
-            } else {
-                throw new \Exception("Attempted to deactivate an inactive plugin: '$type'.");
-            }
-        } else {
-            throw new \Exception("Attempted to deactivate a non-existent plugin: '$type'.");
-        }
-    }
-
-    /**
-     * Check if a plugin is active.
-     * This method needs to accurately reflect how you track the active state of plugins.
-     */
-    private function isActive($type): bool
-    {
-        return in_array($type, $this->activePlugins);
     }
 
     // Log the activation of a plugin
-    private function logActivation($type): void
-    {
-        $logPath = AppConfig::getInstance()->get('log_path');
+    private function logActivation($type): void {
+        $logPath = $this->getLogPath();
         if (!$logPath) {
             throw new \Exception("Log path is not configured.");
         }
-        // Ensure the log directory exists
         $this->ensureLogDirectoryExists($logPath);
         file_put_contents($logPath.'plugin_activation.log', "Plugin $type activated at " . date('Y-m-d H:i:s') . PHP_EOL, FILE_APPEND);
     }
 
     // Ensure the log directory exists before logging
-    private function ensureLogDirectoryExists(): void
-    {
-        $logDir = $this->logPath;
-        if (!is_dir($logDir)) {
-            if (!mkdir($logDir, 0755, true) && !is_dir($logDir)) {
-                throw new \Exception("Failed to create log directory: $logDir");
-
+    private function ensureLogDirectoryExists($logPath): void {
+        if (!is_dir($logPath)) {
+            if (!mkdir($logPath, 0755, true) && !is_dir($logPath)) {
+                throw new \Exception("Failed to create log directory: $logPath");
             }
         }
     }
 
-    private function log($message, $level = 'info'): void
-    {
+    private function log($message, $level = 'info'): void {
         $logger = $this->getPlugin('Logger');
         if ($logger) {
             $logger->log($message, $level);

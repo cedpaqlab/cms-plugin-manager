@@ -4,38 +4,37 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Cedpaq\PluginManager\Config\AppConfig;
 use Cedpaq\PluginManager\Plugins\PluginManager;
 use Cedpaq\PluginManager\Exceptions\PluginNotFoundException;
+use Cedpaq\PluginManager\Config\MongoConfigRepository;
 
-try {
-    $config = AppConfig::getInstance();
+try
+{
+    // Initialize configuration repository
+    $configRepository = new MongoConfigRepository();
+    $config = AppConfig::getInstance($configRepository);
+
+    // Setup logging path
     $config->set('log_path', __DIR__ . '/../logs/');
-    ini_set('error_log', $config->get('log_path').'errors.log');
+    ini_set('error_log', $config->get('log_path') . 'errors.log');
 
-    // Plugins config
-    $config->set('Logger', ['enabled' => true]);
-    $config->set('SEO', ['enabled' => true, 'dependencies' => ['Logger']]);
-    $config->set('Cache', ['enabled' => true]);
+    // Initialize plugin manager
+    $pluginManager = new PluginManager($configRepository);
 
-    $pluginManager = new PluginManager();
-    $pluginManager->loadPlugin('Logger', $config->get('Logger'));
-    $pluginManager->activatePlugin('Logger');
-    #$pluginManager->deactivatePlugin('Logger');
+    // Define plugin configurations
+    $pluginConfigs = [
+        'Logger' => ['enabled' => true],
+        'Cache' => ['enabled' => true],
+        'SEO' => ['enabled' => true, 'dependencies' => ['Logger']],
+        'CMS' => ['enabled' => true, 'dependencies' => ['SEO', 'Cache']]
+    ];
 
-    $pluginManager->loadPlugin('SEO', $config->get('SEO'));
-    $pluginManager->activatePlugin('SEO');
-    #$pluginManager->deactivatePlugin('SEO');
+    // Load and conditionally activate plugins based on configuration and database state
+    $pluginManager->initializePlugins($pluginConfigs);
 
-    $pluginManager->loadPlugin('Cache', $config->get('Cache'));
-    $pluginManager->activatePlugin('Cache');
-    #$pluginManager->deactivatePlugin('Cache');
+    echo "DEBUG loaded plugins: ".$pluginManager->listLoadedPlugins() . PHP_EOL;
 
     // Usages
     #$seoPlugin = $pluginManager->getPlugin('SEO');
     #$seoPlugin->doSomething();
-
-//    $logger = $pluginManager->getPlugin('Logger');
-//    if ($logger) {
-//        $logger->log("Application loaded!");
-//    }
 
 }
 catch (PluginNotFoundException $e)
