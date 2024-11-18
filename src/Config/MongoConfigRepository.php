@@ -2,15 +2,13 @@
 namespace Cedpaq\PluginManager\Config;
 
 use MongoDB\Client;
-use MongoDB\Collection;
-use MongoDB\Database;
 
 class MongoConfigRepository implements ConfigRepositoryInterface {
     private $db;
     private $configCollection;
     private $pluginCollection;
 
-    // Inject MongoDB Client
+    // Inject MongoDB Client. Usefull for PHPUNIT testing.
     public function __construct(Client $client = null) {
         $client = $client ?? new Client("mongodb://localhost:27017");
         $this->db = $client->selectDatabase('pluginManager');
